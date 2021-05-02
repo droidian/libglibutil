@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2016-2020 Jolla Ltd.
- * Copyright (C) 2016-2020 Slava Monich <slava.monich@jolla.com>
+ * Copyright (C) 2016-2021 Jolla Ltd.
+ * Copyright (C) 2016-2021 Slava Monich <slava.monich@jolla.com>
  *
  * You may use this file under the terms of BSD license as follows:
  *
@@ -418,7 +418,7 @@ gutil_bytes_equal_data(
 /* Calculates the length of NULL-terminated array of pointers */
 gsize
 gutil_ptrv_length(
-    gconstpointer ptrv) /* Since 1.0.50 */
+    const void* ptrv) /* Since 1.0.50 */
 {
     if (G_LIKELY(ptrv)) {
         gsize len = 0;
@@ -428,6 +428,35 @@ gutil_ptrv_length(
         return len;
     } else {
         return 0;
+    }
+}
+
+/* Frees NULL-terminated array of pointers and whatever they're pointing to. */
+void
+gutil_ptrv_free(
+    void** ptrv) /* Since 1.0.51 */
+{
+    if (G_LIKELY(ptrv)) {
+        void** ptr = ptrv;
+
+        while (*ptr) g_free(*ptr++);
+        g_free(ptrv);
+    }
+}
+
+/* Similar to g_memdup but takes gsize as the number of bytes to copy */
+void*
+gutil_memdup(
+    const void* ptr,
+    gsize size) /* Since 1.0.52 */
+{
+    if (G_LIKELY(ptr) && G_LIKELY(size)) {
+        void* copy = g_malloc(size);
+
+        memcpy(copy, ptr, size);
+        return copy;
+    } else {
+        return NULL;
     }
 }
 
