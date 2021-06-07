@@ -175,15 +175,56 @@ test_parse_int(
     g_assert(!gutil_parse_int("0 trailing garbage", 0, NULL));
     g_assert(gutil_parse_int("0", 0, NULL));
     g_assert(gutil_parse_int("0", 0, &value));
-    g_assert(value == 0);
+    g_assert_cmpint(value, == ,0);
+    g_assert(gutil_parse_int("-1", 0, &value));
+    g_assert_cmpint(value, == ,-1);
+    g_assert(gutil_parse_int("42", 0, &value));
+    g_assert_cmpint(value, == ,42);
     g_assert(!gutil_parse_int("0x10000000000000000", 0, &value));
     g_assert(!gutil_parse_int("-2147483649", 0, &value));
     g_assert(!gutil_parse_int("4294967295", 0, &value));
     g_assert(gutil_parse_int(" 0x7fffffff ", 0, &value));
-    g_assert(value == 0x7fffffff);
+    g_assert_cmpint(value, == ,0x7fffffff);
     g_assert(gutil_parse_int(" 7fffffff ", 16, &value));
-    g_assert(value == 0x7fffffff);
+    g_assert_cmpint(value, == ,0x7fffffff);
+    g_assert(gutil_parse_int("7ffffffe ", 16, &value));
+    g_assert_cmpint(value, == ,0x7ffffffe);
     g_assert(!gutil_parse_int("0xffffffff", 0, &value));
+}
+
+/*==========================================================================*
+ * parse_uint
+ *==========================================================================*/
+
+static
+void
+test_parse_uint(
+    void)
+{
+    unsigned int value;
+
+    g_assert(!gutil_parse_uint(NULL, 0, NULL));
+    g_assert(!gutil_parse_uint("", 0, NULL));
+    g_assert(!gutil_parse_uint("garbage", 0, NULL));
+    g_assert(!gutil_parse_uint("0 trailing garbage", 0, NULL));
+    g_assert(gutil_parse_uint("0", 0, NULL));
+    g_assert(gutil_parse_uint("0", 0, &value));
+    g_assert_cmpuint(value, == ,0);
+    g_assert(gutil_parse_uint("42", 0, &value));
+    g_assert_cmpuint(value, == ,42);
+    g_assert(!gutil_parse_uint("0x10000000000000000", 0, &value));
+    g_assert(!gutil_parse_uint("-2147483649", 0, &value));
+    g_assert(!gutil_parse_uint("-1", 0, &value));
+    g_assert(gutil_parse_uint("4294967295", 0, &value));
+    g_assert_cmpuint(value, == ,4294967295);
+    g_assert(gutil_parse_uint(" 0x7fffffff ", 0, &value));
+    g_assert_cmpuint(value, == ,0x7fffffff);
+    g_assert(gutil_parse_uint(" 7fffffff ", 16, &value));
+    g_assert_cmpuint(value, == ,0x7fffffff);
+    g_assert(gutil_parse_uint("7ffffffe ", 16, &value));
+    g_assert_cmpuint(value, == ,0x7ffffffe);
+    g_assert(gutil_parse_uint("0xffffffff", 0, &value));
+    g_assert_cmpuint(value, == ,0xffffffff);
 }
 
 /*==========================================================================*
@@ -541,6 +582,82 @@ test_memdup(
 }
 
 /*==========================================================================*
+ * range_init
+ *==========================================================================*/
+
+static
+void
+test_range_init(
+    void)
+{
+    static const guint8 data[] = { 0x01, 0x02, 0x03 };
+    GBytes* bytes = g_bytes_new_static(data, sizeof(data));
+    GUtilRange range;
+
+    g_assert(!gutil_range_init_with_bytes(NULL, NULL));
+    g_assert(!gutil_range_init_with_bytes(&range, NULL));
+    g_assert(!range.ptr);
+    g_assert(!range.end);
+
+    g_assert(gutil_range_init_with_bytes(&range, bytes) == sizeof(data));
+    g_assert(range.ptr == data);
+    g_assert(range.end == (data + sizeof(data)));
+    g_bytes_unref(bytes);
+}
+
+/*==========================================================================*
+ * range_prefix
+ *==========================================================================*/
+
+static
+void
+test_range_prefix(
+    void)
+{
+    static const guint8 data[] = { 0x01, 0x02, 0x03, 0x04 };
+    static const guint8 prefix[] = { 0x01, 0x02 };
+    static const guint8 not_prefix[] = { 0x03, 0x04 };
+    static const guint8 too_long[] = { 0x01, 0x02, 0x03, 0x04, 0x05 };
+    GUtilData prefix_data, not_prefix_data, too_long_data;
+    GUtilRange range;
+
+    memset(&range, 0, sizeof(range));
+    g_assert(!gutil_range_has_prefix(NULL, NULL));
+    g_assert(!gutil_range_has_prefix(&range, NULL));
+
+    not_prefix_data.bytes = not_prefix;
+    not_prefix_data.size = sizeof(not_prefix);
+    too_long_data.bytes = too_long;
+    too_long_data.size = sizeof(too_long);
+
+    range.end = range.ptr = data; /* Empty range */
+    memset(&prefix_data, 0, sizeof(prefix_data)); /* Empty prefix */
+    /* Empty range doesn't have NULL prefix */
+    g_assert(!gutil_range_has_prefix(&range, NULL));
+    /* But does have empty prefix */
+    g_assert(gutil_range_has_prefix(&range, &prefix_data));
+
+    /* And doesn't have non-empty prefix */
+    g_assert(!gutil_range_has_prefix(&range, &not_prefix_data));
+    prefix_data.bytes = prefix;
+    prefix_data.size = sizeof(prefix);
+    g_assert(!gutil_range_has_prefix(&range, &prefix_data));
+
+    range.end = range.ptr + sizeof(data);
+
+    g_assert(gutil_range_has_prefix(&range, &prefix_data));
+    g_assert(!gutil_range_has_prefix(&range, &not_prefix_data));
+    g_assert(!gutil_range_has_prefix(&range, &too_long_data));
+
+    /* Test skipping */
+    g_assert(!gutil_range_skip_prefix(&range, &not_prefix_data));
+    g_assert(range.ptr == data);
+
+    g_assert(gutil_range_skip_prefix(&range, &prefix_data));
+    g_assert(range.ptr == (data + prefix_data.size));
+}
+
+/*==========================================================================*
  * Common
  *==========================================================================*/
 
@@ -561,6 +678,7 @@ int main(int argc, char* argv[])
     g_test_add_func(TEST_("hex2bin"), test_hex2bin);
     g_test_add_func(TEST_("hexdump"), test_hexdump);
     g_test_add_func(TEST_("parse_int"), test_parse_int);
+    g_test_add_func(TEST_("parse_uint"), test_parse_uint);
     g_test_add_func(TEST_("data_equal"), test_data_equal);
     g_test_add_func(TEST_("data_prefix"), test_data_prefix);
     g_test_add_func(TEST_("data_suffix"), test_data_suffix);
@@ -572,6 +690,8 @@ int main(int argc, char* argv[])
     g_test_add_func(TEST_("ptrv_lenght"), test_ptrv_length);
     g_test_add_func(TEST_("ptrv_free"), test_ptrv_free);
     g_test_add_func(TEST_("memdup"), test_memdup);
+    g_test_add_func(TEST_("range_init"), test_range_init);
+    g_test_add_func(TEST_("range_prefix"), test_range_prefix);
     test_init(&test_opt, argc, argv);
     return g_test_run();
 }

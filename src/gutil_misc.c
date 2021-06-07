@@ -36,7 +36,6 @@
 
 #include <ctype.h>
 #include <limits.h>
-#include <errno.h>
 
 void
 gutil_disconnect_handlers(
@@ -46,6 +45,7 @@ gutil_disconnect_handlers(
 {
     if (G_LIKELY(instance) && G_LIKELY(ids)) {
         int i;
+
         for (i=0; i<count; i++) {
             if (ids[i]) {
                 g_signal_handler_disconnect(instance, ids[i]);
@@ -64,6 +64,7 @@ gutil_hex2bin(
     if (str && data && len > 0 && !(len & 1)) {
         gssize i;
         guint8* ptr = data;
+
         for (i=0; i<len; i+=2) {
             static const guint8 hex[] = {
                 0, 1, 2, 3, 4, 5, 6, 7,     /* 0x30..0x37 */
@@ -76,7 +77,8 @@ gutil_hex2bin(
             };
             const char x1 = str[i];
             const char x2 = str[i+1];
-            if (isxdigit(x1) && isxdigit(x2)) {
+
+            if (g_ascii_isxdigit(x1) && g_ascii_isxdigit(x2)) {
                 *ptr++ = (hex[x1-0x30] << 4) + hex[x2-0x30];
             } else {
                 return NULL;
@@ -95,9 +97,11 @@ gutil_hex2bytes(
     if (str) {
         if (len < 0) len = strlen(str);
         if (len > 0 && !(len & 1)) {
-            void* data = g_malloc(len/2);
+            const gsize n = len/2;
+            void* data = g_malloc(n);
+
             if (gutil_hex2bin(str, len, data)) {
-                return g_bytes_new_take(data, len/2);
+                return g_bytes_new_take(data, n);
             }
             g_free(data);
         }
@@ -153,36 +157,74 @@ gutil_hexdump(
     return bytes_dumped;
 }
 
-/* Since 1.0.30 */
+static
+const char*
+gutil_strstrip(
+    const char* str,
+    char** tmp)
+{
+    /* Caller makes sure that str isn't NULL */
+    const gsize len = strlen(str);
+
+    if (g_ascii_isspace(str[0]) || g_ascii_isspace(str[len - 1])) {
+        /* Need to modify the original string */
+        return (*tmp = g_strstrip(gutil_memdup(str, len + 1)));
+    } else {
+        /* The original string is fine as is */
+        return str;
+    }
+}
+
 gboolean
 gutil_parse_int(
     const char* str,
     int base,
-    int* value)
+    int* value) /* Since 1.0.30 */
 {
     gboolean ok = FALSE;
 
     if (str && str[0]) {
-        char* str2 = g_strstrip(g_strdup(str));
-        char* end = str2;
-        gint64 l;
+        char* tmp = NULL;
+        char* end = NULL;
+        const char* stripped = gutil_strstrip(str, &tmp);
+        const gint64 ll = g_ascii_strtoll(stripped, &end, base);
 
-        errno = 0;
-        l = g_ascii_strtoll(str2, &end, base);
-        ok = !*end && errno != ERANGE && l >= INT_MIN && l <= INT_MAX;
+        ok = !*end && ll >= INT_MIN && ll <= INT_MAX;
         if (ok && value) {
-            *value = (int)l;
+            *value = (int)ll;
         }
-        g_free(str2);
+        g_free(tmp);
     }
     return ok;
 }
 
-/* since 1.0.31 */
+gboolean
+gutil_parse_uint(
+    const char* str,
+    int base,
+    unsigned int* value) /* Since 1.0.53 */
+{
+    gboolean ok = FALSE;
+
+    if (str && str[0]) {
+        char* tmp = NULL;
+        char* end = NULL;
+        const char* stripped = gutil_strstrip(str, &tmp);
+        const guint64 ull = g_ascii_strtoull(stripped, &end, base);
+
+        ok = !*end && ull <= UINT_MAX;
+        if (ok && value) {
+            *value = (unsigned int)ull;
+        }
+        g_free(tmp);
+    }
+    return ok;
+}
+
 gboolean
 gutil_data_equal(
     const GUtilData* data1,
-    const GUtilData* data2)
+    const GUtilData* data2) /* Since 1.0.31 */
 {
     if (data1 == data2) {
         return TRUE;
@@ -458,6 +500,52 @@ gutil_memdup(
     } else {
         return NULL;
     }
+}
+
+gsize
+gutil_range_init_with_bytes(
+    GUtilRange* range,
+    GBytes* bytes) /* Since 1.0.55 */
+{
+    gsize size = 0;
+
+    if (G_LIKELY(range)) {
+        if (G_LIKELY(bytes)) {
+            range->ptr = (const guint8*) g_bytes_get_data(bytes, &size);
+            range->end = range->ptr + size;
+        } else {
+            memset(range, 0, sizeof(*range));
+        }
+    }
+    return size;
+}
+
+gboolean
+gutil_range_has_prefix(
+    const GUtilRange* range,
+    const GUtilData* prefix) /* Since 1.0.55 */
+{
+    if (G_LIKELY(range) && G_LIKELY(range->ptr) && G_LIKELY(prefix)) {
+        if (range->end > range->ptr) {
+            return (gsize)(range->end - range->ptr) >= prefix->size &&
+                !memcmp(range->ptr, prefix->bytes, prefix->size);
+        } else {
+            return !prefix->size;
+        }
+    }
+    return FALSE;
+}
+
+gboolean
+gutil_range_skip_prefix(
+    GUtilRange* range,
+    const GUtilData* prefix) /* Since 1.0.55 */
+{
+    if (gutil_range_has_prefix(range, prefix)) {
+        range->ptr += prefix->size;
+        return TRUE;
+    }
+    return FALSE;
 }
 
 /*

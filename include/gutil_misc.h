@@ -70,6 +70,12 @@ gutil_parse_int(
     int* value); /* Since 1.0.30 */
 
 gboolean
+gutil_parse_uint(
+    const char* str,
+    int base,
+    unsigned int* value); /* Since 1.0.53 */
+
+gboolean
 gutil_data_equal(
     const GUtilData* data1,
     const GUtilData* data2); /* Since 1.0.31 */
@@ -129,6 +135,21 @@ void*
 gutil_memdup(
     const void* ptr,
     gsize size); /* Since 1.0.52 */
+
+gsize
+gutil_range_init_with_bytes(
+    GUtilRange* range,
+    GBytes* bytes); /* Since 1.0.55 */
+
+gboolean
+gutil_range_has_prefix(
+    const GUtilRange* range,
+    const GUtilData* prefix); /* Since 1.0.55 */
+
+gboolean
+gutil_range_skip_prefix(
+    GUtilRange* range,
+    const GUtilData* prefix); /* Since 1.0.55 */
 
 G_END_DECLS
 
