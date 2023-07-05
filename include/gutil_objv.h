@@ -29,55 +29,85 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef GUTIL_VERSION_H
-#define GUTIL_VERSION_H
+#ifndef GUTIL_OBJV_H
+#define GUTIL_OBJV_H
 
 #include "gutil_types.h"
 
+#include <glib-object.h>
+
 /*
- * GUTIL_VERSION_X_Y_Z macros will be added with each release. The fact that
- * such macro is defined means that you're compiling against libgutil version
- * X.Y.Z or greater.
+ * Operations on NULL-terminated array of references to GObjects.
  *
- * Since 1.0.69
+ * Since 1.0.70
  */
 
 G_BEGIN_DECLS
 
-#define GUTIL_VERSION_MAJOR   1
-#define GUTIL_VERSION_MINOR   0
-#define GUTIL_VERSION_MICRO   70
-#define GUTIL_VERSION_STRING  "1.0.70"
+void
+gutil_objv_free(
+    GObject** objv);
 
-extern const guint gutil_version_major; /* GUTIL_VERSION_MAJOR */
-extern const guint gutil_version_minor; /* GUTIL_VERSION_MINOR */
-extern const guint gutil_version_micro; /* GUTIL_VERSION_MICRO */
+GObject**
+gutil_objv_copy(
+    GObject* const* objv)
+    G_GNUC_WARN_UNUSED_RESULT;
 
-/* Version as a single word */
-#define GUTIL_VERSION_(v1,v2,v3) \
-    ((((v1) & 0x7f) << 24) | \
-     (((v2) & 0xfff) << 12) | \
-      ((v3) & 0xfff))
+GObject**
+gutil_objv_add(
+    GObject** objv,
+    GObject* obj)
+    G_GNUC_WARN_UNUSED_RESULT;
 
-#define GUTIL_VERSION_MAJOR_(v)   (((v) >> 24) & 0x7f)
-#define GUTIL_VERSION_MINOR_(v)   (((v) >> 12) & 0xfff)
-#define GUTIL_VERSION_MICRO_(v)   (((v) & 0xfff))
+GObject**
+gutil_objv_remove(
+    GObject** objv,
+    GObject* obj,
+    gboolean all)
+    G_GNUC_WARN_UNUSED_RESULT;
 
-/* Current compile time version as a single word */
-#define GUTIL_VERSION GUTIL_VERSION_ \
-    (GUTIL_VERSION_MAJOR, GUTIL_VERSION_MINOR, GUTIL_VERSION_MICRO)
+GObject**
+gutil_objv_remove_at(
+    GObject** objv,
+    gsize pos)
+    G_GNUC_WARN_UNUSED_RESULT;
 
-/* Runtime version as a single word */
-#define gutil_version() GUTIL_VERSION_ \
-    (gutil_version_major, gutil_version_minor, gutil_version_micro)
+GObject*
+gutil_objv_at(
+    GObject* const* objv,
+    gsize pos);
 
-/* Specific versions */
-#define GUTIL_VERSION_1_0_69 GUTIL_VERSION_(1,0,69)
-#define GUTIL_VERSION_1_0_70 GUTIL_VERSION_(1,0,70)
+gboolean
+gutil_objv_equal(
+    GObject* const* objv1,
+    GObject* const* objv2);
+
+GObject*
+gutil_objv_first(
+    GObject* const* objv);
+
+GObject*
+gutil_objv_last(
+    GObject* const* objv);
+
+gssize
+gutil_objv_find(
+    GObject* const* objv,
+    GObject* obj);
+
+gssize
+gutil_objv_find_last(
+    GObject* const* objv,
+    GObject* obj);
+
+gboolean
+gutil_objv_contains(
+    GObject* const* objv,
+    GObject* obj);
 
 G_END_DECLS
 
-#endif /* GUTIL_VERSION_H */
+#endif /* GUTIL_OBJV_H */
 
 /*
  * Local Variables:
