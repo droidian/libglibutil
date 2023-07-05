@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Jolla Ltd.
- * Copyright (C) 2016-2022 Slava Monich <slava.monich@jolla.com>
+ * Copyright (C) 2023 Slava Monich <slava@monich.com>
  *
  * You may use this file under the terms of BSD license as follows:
  *
@@ -30,37 +29,54 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TEST_COMMON_H
-#define TEST_COMMON_H
+#ifndef GUTIL_VERSION_H
+#define GUTIL_VERSION_H
 
-#include <gutil_types.h>
+#include "gutil_types.h"
 
-#include <glib-object.h>
+/*
+ * GUTIL_VERSION_X_Y_Z macros will be added with each release. The fact that
+ * such macro is defined means that you're compiling against libgutil version
+ * X.Y.Z or greater.
+ *
+ * Since 1.0.69
+ */
 
-#define TEST_FLAG_DEBUG (0x01)
+G_BEGIN_DECLS
 
-typedef struct test_opt {
-    int flags;
-} TestOpt;
+#define GUTIL_VERSION_MAJOR   1
+#define GUTIL_VERSION_MINOR   0
+#define GUTIL_VERSION_MICRO   69
+#define GUTIL_VERSION_STRING  "1.0.69"
 
-GType test_object_get_type(void);
-#define TEST_OBJECT_TYPE (test_object_get_type())
+extern const guint gutil_version_major; /* GUTIL_VERSION_MAJOR */
+extern const guint gutil_version_minor; /* GUTIL_VERSION_MINOR */
+extern const guint gutil_version_micro; /* GUTIL_VERSION_MICRO */
 
-extern gint test_object_count;
+/* Version as a single word */
+#define GUTIL_VERSION_(v1,v2,v3) \
+    ((((v1) & 0x7f) << 24) | \
+     (((v2) & 0xfff) << 12) | \
+      ((v3) & 0xfff))
 
-/* Should be invoked after g_test_init */
-void
-test_init(
-    TestOpt* opt,
-    int argc,
-    char* argv[]);
+#define GUTIL_VERSION_MAJOR_(v)   (((v) >> 24) & 0x7f)
+#define GUTIL_VERSION_MINOR_(v)   (((v) >> 12) & 0xfff)
+#define GUTIL_VERSION_MICRO_(v)   (((v) & 0xfff))
 
-/* Macros */
+/* Current compile time version as a single word */
+#define GUTIL_VERSION GUTIL_VERSION_ \
+    (GUTIL_VERSION_MAJOR, GUTIL_VERSION_MINOR, GUTIL_VERSION_MICRO)
 
-#define TEST_INIT_DATA(a,b) ((a).bytes = (void*)(b), (a).size = sizeof(b))
-#define TEST_ARRAY_AND_SIZE(a) (a), sizeof(a)
+/* Runtime version as a single word */
+#define gutil_version() GUTIL_VERSION_ \
+    (gutil_version_major, gutil_version_minor, gutil_version_micro)
 
-#endif /* TEST_COMMON_H */
+/* Specific versions */
+#define GUTIL_VERSION_1_0_69 GUTIL_VERSION_(1,0,69)
+
+G_END_DECLS
+
+#endif /* GUTIL_VERSION_H */
 
 /*
  * Local Variables:

@@ -2,6 +2,7 @@
 
 all:
 %:
+	@$(MAKE) -C test_datapack $*
 	@$(MAKE) -C test_history $*
 	@$(MAKE) -C test_idlepool $*
 	@$(MAKE) -C test_idlequeue $*
@@ -12,3 +13,4 @@ all:
 	@$(MAKE) -C test_misc $*
 	@$(MAKE) -C test_ring $*
 	@$(MAKE) -C test_strv $*
+	@$(MAKE) -C test_weakref $*

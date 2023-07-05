@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Jolla Ltd.
- * Copyright (C) 2016-2022 Slava Monich <slava.monich@jolla.com>
+ * Copyright (C) 2023 Slava Monich <slava@monich.com>
  *
  * You may use this file under the terms of BSD license as follows:
  *
@@ -30,37 +29,82 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TEST_COMMON_H
-#define TEST_COMMON_H
-
-#include <gutil_types.h>
+#include "gutil_weakref.h"
+#include "gutil_log.h"
+#include "gutil_macros.h"
 
 #include <glib-object.h>
 
-#define TEST_FLAG_DEBUG (0x01)
+/*
+ * Ref-countable weak reference can be used to avoid calling g_weak_ref_set()
+ * too often because it grabs global weak_locations_lock for exclusive access.
+ * Note that g_weak_ref_set() is also invoked internally by g_weak_ref_init()
+ * and g_weak_ref_clear().
+ *
+ * g_weak_ref_get() on the other hand only acquires weak_locations_lock
+ * for read-only access which is less of a bottleneck in a multi-threaded
+ * environment. And it's generally significantly simpler and faster than
+ * g_weak_ref_set().
+ *
+ * Since 1.0.68
+ */
 
-typedef struct test_opt {
-    int flags;
-} TestOpt;
+struct gutil_weakref {
+    gint ref_count;
+    GWeakRef weak_ref;
+};
 
-GType test_object_get_type(void);
-#define TEST_OBJECT_TYPE (test_object_get_type())
+GUtilWeakRef*
+gutil_weakref_new(
+    gpointer obj)
+{
+    GUtilWeakRef* self = g_slice_new(GUtilWeakRef);
 
-extern gint test_object_count;
+    g_atomic_int_set(&self->ref_count, 1);
+    g_weak_ref_init(&self->weak_ref, obj);
+    return self;
+}
 
-/* Should be invoked after g_test_init */
+GUtilWeakRef*
+gutil_weakref_ref(
+    GUtilWeakRef* self)
+{
+    if (G_LIKELY(self)) {
+        GASSERT(self->ref_count > 0);
+        g_atomic_int_inc(&self->ref_count);
+    }
+    return self;
+}
+
 void
-test_init(
-    TestOpt* opt,
-    int argc,
-    char* argv[]);
+gutil_weakref_unref(
+    GUtilWeakRef* self)
+{
+    if (G_LIKELY(self)) {
+        GASSERT(self->ref_count > 0);
+        if (g_atomic_int_dec_and_test(&self->ref_count)) {
+            g_weak_ref_clear(&self->weak_ref);
+            gutil_slice_free(self);
+        }
+    }
+}
 
-/* Macros */
+gpointer
+gutil_weakref_get(
+    GUtilWeakRef* self)
+{
+    return G_LIKELY(self) ? g_weak_ref_get(&self->weak_ref) : NULL;
+}
 
-#define TEST_INIT_DATA(a,b) ((a).bytes = (void*)(b), (a).size = sizeof(b))
-#define TEST_ARRAY_AND_SIZE(a) (a), sizeof(a)
-
-#endif /* TEST_COMMON_H */
+void
+gutil_weakref_set(
+    GUtilWeakRef* self,
+    gpointer obj)
+{
+    if (G_LIKELY(self)) {
+        g_weak_ref_set(&self->weak_ref, obj);
+    }
+}
 
 /*
  * Local Variables:

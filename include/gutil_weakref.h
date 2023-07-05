@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Jolla Ltd.
- * Copyright (C) 2016-2022 Slava Monich <slava.monich@jolla.com>
+ * Copyright (C) 2023 Slava Monich <slava@monich.com>
  *
  * You may use this file under the terms of BSD license as follows:
  *
@@ -30,37 +29,51 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TEST_COMMON_H
-#define TEST_COMMON_H
+#ifndef GUTIL_WEAKREF_H
+#define GUTIL_WEAKREF_H
 
-#include <gutil_types.h>
+#include "gutil_types.h"
 
-#include <glib-object.h>
+/*
+ * Ref-countable weak reference can be used to avoid calling g_weak_ref_set()
+ * too often because it grabs global weak_locations_lock for exclusive access.
+ * Note that g_weak_ref_set() is also invoked internally by g_weak_ref_init()
+ * and g_weak_ref_clear().
+ *
+ * g_weak_ref_get() on the other hand only acquires weak_locations_lock
+ * for read-only access which is less of a bottleneck in a multi-threaded
+ * environment. And it's generally significantly simpler and faster than
+ * g_weak_ref_set().
+ *
+ * Since 1.0.68
+ */
 
-#define TEST_FLAG_DEBUG (0x01)
+G_BEGIN_DECLS
 
-typedef struct test_opt {
-    int flags;
-} TestOpt;
+GUtilWeakRef*
+gutil_weakref_new(
+    gpointer obj);
 
-GType test_object_get_type(void);
-#define TEST_OBJECT_TYPE (test_object_get_type())
+GUtilWeakRef*
+gutil_weakref_ref(
+    GUtilWeakRef* ref);
 
-extern gint test_object_count;
-
-/* Should be invoked after g_test_init */
 void
-test_init(
-    TestOpt* opt,
-    int argc,
-    char* argv[]);
+gutil_weakref_unref(
+    GUtilWeakRef* ref);
 
-/* Macros */
+gpointer
+gutil_weakref_get(
+    GUtilWeakRef* ref);
 
-#define TEST_INIT_DATA(a,b) ((a).bytes = (void*)(b), (a).size = sizeof(b))
-#define TEST_ARRAY_AND_SIZE(a) (a), sizeof(a)
+void
+gutil_weakref_set(
+    GUtilWeakRef* ref,
+    gpointer obj);
 
-#endif /* TEST_COMMON_H */
+G_END_DECLS
+
+#endif /* GUTIL_WEAKREF_H */
 
 /*
  * Local Variables:

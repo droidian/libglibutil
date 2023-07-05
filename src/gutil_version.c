@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2016-2022 Jolla Ltd.
- * Copyright (C) 2016-2022 Slava Monich <slava.monich@jolla.com>
+ * Copyright (C) 2023 Slava Monich <slava@monich.com>
  *
  * You may use this file under the terms of BSD license as follows:
  *
@@ -30,37 +29,11 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifndef TEST_COMMON_H
-#define TEST_COMMON_H
+#include "gutil_version.h"
 
-#include <gutil_types.h>
-
-#include <glib-object.h>
-
-#define TEST_FLAG_DEBUG (0x01)
-
-typedef struct test_opt {
-    int flags;
-} TestOpt;
-
-GType test_object_get_type(void);
-#define TEST_OBJECT_TYPE (test_object_get_type())
-
-extern gint test_object_count;
-
-/* Should be invoked after g_test_init */
-void
-test_init(
-    TestOpt* opt,
-    int argc,
-    char* argv[]);
-
-/* Macros */
-
-#define TEST_INIT_DATA(a,b) ((a).bytes = (void*)(b), (a).size = sizeof(b))
-#define TEST_ARRAY_AND_SIZE(a) (a), sizeof(a)
-
-#endif /* TEST_COMMON_H */
+const guint gutil_version_major = GUTIL_VERSION_MAJOR;
+const guint gutil_version_minor = GUTIL_VERSION_MINOR;
+const guint gutil_version_micro = GUTIL_VERSION_MICRO;
 
 /*
  * Local Variables:

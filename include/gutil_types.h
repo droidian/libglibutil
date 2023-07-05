@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014-2021 Jolla Ltd.
- * Copyright (C) 2014-2021 Slava Monich <slava.monich@jolla.com>
+ * Copyright (C) 2023 Slava Monich <slava@monich.com>
  *
  * You may use this file under the terms of BSD license as follows:
  *
@@ -48,6 +48,7 @@ typedef struct gutil_int_history GUtilIntHistory;
 typedef struct gutil_inotify_watch GUtilInotifyWatch;
 typedef struct gutil_ring GUtilRing;
 typedef struct gutil_time_notify GUtilTimeNotify;
+typedef struct gutil_weakref GUtilWeakRef; /* Since 1.0.68 */
 
 typedef struct gutil_data {
     const guint8* bytes;
